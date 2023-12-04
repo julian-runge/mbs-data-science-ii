@@ -12,7 +12,7 @@ pkgs <- list("glmnet", "reticulate", "stringr", "rstudioapi", "data.table", "par
 lapply(pkgs, require, character.only = T)
 
 # set wd
-setwd("TBD")
+setwd("/Users/jr/Dropbox/Talks:teaching/Mannheim Business School/Data")
 
 ### read in data
 #write.csv(data, file="combined.csv")
@@ -167,11 +167,7 @@ rf_x1_plot <- ggplot(rf_x1_par, aes(x=d14_spend, y=yhat)) +
   #xlim(0,.5) +
   #ylim(0,10) +
   xlab("D14 Spend") +
-  ylab("D30 Spend") +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+  ylab("y = D30 Spend - D14 Spend")
 
 rf_x2_par <- partial(rf_x2,
                      pred.var = c("count_p_1"),
@@ -182,11 +178,7 @@ rf_x2_plot <- ggplot(rf_x2_par, aes(x=count_p_1, y=yhat)) +
   #xlim(0,.5) +
   #ylim(0,10) +
   xlab("Count P15") +
-  ylab("D30 Spend") +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+  ylab("y = D30 Spend - D14 Spend")
 
 ### generate partial dependency plots with two main x variables
 rf_x1_par2 <- partial(rf_x1,
@@ -194,29 +186,21 @@ rf_x1_par2 <- partial(rf_x1,
                       chull = TRUE)
 rf_x1_plot2 <- ggplot(rf_x1_par2, aes(x=d14_spend, y=d7_spend, z=yhat)) +
   geom_tile(aes(fill=yhat)) +
-  scale_fill_gradientn(colours=rev(brewer.pal(9,"YlGnBu")), name = "D30 Spend", labels = NULL) +
-  stat_contour(bins=10,aes(x=Number_experiments, y=Experimentation_adoption, z=yhat), color="black", size=0.2) +
+  scale_fill_gradientn(colours=rev(brewer.pal(9,"YlGnBu")), name = "y = D30 Spend - D14 Spend", labels = NULL) +
+  stat_contour(bins=10,aes(x=d14_spend, y=d7_spend, z=yhat), color="black", size=0.2) +
   #xlim(0,.5) +
   #ylim(0,10) +
   xlab("D14 Spend") +
-  ylab("D7 Spend") +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+  ylab("D7 Spend")
 
 rf_x2_par2 <- partial(rf_x2,
                       pred.var = c("count_p_1","sum_p_6"),
                       chull = TRUE)
 rf_x2_plot2 <- ggplot(rf_x2_par2, aes(x=count_p_1, y=sum_p_6, z=yhat)) +
   geom_tile(aes(fill=yhat)) +
-  scale_fill_gradientn(colours=rev(brewer.pal(9,"YlGnBu")), name = "D30 Spend", labels = NULL) +
-  stat_contour(bins=10,aes(x=Number_experiments, y=Experimentation_adoption, z=yhat), color="black", size=0.2) +
+  scale_fill_gradientn(colours=rev(brewer.pal(9,"YlGnBu")), name = "y = D30 Spend - D14 Spend", labels = NULL) +
+  stat_contour(bins=10,aes(x=count_p_1, y=sum_p_6, z=yhat), color="black", size=0.2) +
   #xlim(0,.5) +
   #ylim(0,10) +
   xlab("Count P1") +
-  ylab("Sum P6") +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+  ylab("Sum P6")
