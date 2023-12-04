@@ -177,7 +177,7 @@ rf_x2_plot <- ggplot(rf_x2_par, aes(x=count_p_1, y=yhat)) +
   geom_smooth(method="auto") +
   #xlim(0,.5) +
   #ylim(0,10) +
-  xlab("Count P15") +
+  xlab("Count P1") +
   ylab("y = D30 Spend - D14 Spend")
 
 ### generate partial dependency plots with two main x variables
