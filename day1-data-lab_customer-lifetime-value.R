@@ -16,7 +16,7 @@ setwd("TBD")
 
 ### read in data
 #write.csv(data, file="combined.csv")
-data <- read.csv("d14_d30_data_v3.csv", header = TRUE)
+data <- read.csv("day1-data.csv", header = TRUE)
 
 ### some data formatting
 data$d30_spend <- as.numeric(data$d30_spend)
@@ -41,9 +41,16 @@ data$count_p_15 <- as.numeric(data$count_p_15)
 data$count_p_19 <- as.numeric(data$count_p_19)
 data$count_p_20 <- as.numeric(data$count_p_20)
 
+# impute 0 to deal with missings
+data[is.na(data) == TRUE] <- 0
+
+# create outcome variable as d30 - d14 spend
+data$y <- data$d30_spend - data$d14_spend
+data$y[data$y<0] <- 0
+
 ### correlation heatmap
 # select variables used in analysis for heatmap
-cor_vars <- c("d30_spend","d14_spend","d7_spend","d3_spend","d1_spend",
+cor_vars <- c("y","d30_spend","d14_spend","d7_spend","d3_spend","d1_spend",
               "count_p_1","max_p_2","p_4","p_5","sum_p_6","count_p_7",
               "count_p_8","count_p_9","count_p_10","count_p_11","count_p_12",
               "count_p_13","len_p_14","count_p_15","count_p_19","count_p_20")
@@ -70,55 +77,57 @@ melted_cormat <- melt(upper_tri, na.rm = TRUE)
 #levels(melted_cormat$Var2)[levels(melted_cormat$Var2)=="years_since_first_spend"] <- "Years active on platform"
 
 cor_heat <- ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
-            geom_tile(color = "white")+
-            scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                                 midpoint = 0, limit = c(-1,1), space = "Lab", 
-                                 name="Pearson\nCorrelation") +
-            theme_minimal()+ 
-            theme(axis.text.x = element_text(angle = 45, vjust = 1, 
-                                             size = 12, hjust = 1))+
-            theme(axis.text.y = element_text(size = 12))+
-            coord_fixed()
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal()+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 12, hjust = 1))+
+  theme(axis.text.y = element_text(size = 12))+
+  coord_fixed()
 
 
 ### fit random forest
+# subset data
+#data_sub <- filter(data,data$d14_spend>20)
+data_sub <- data[sample(nrow(data), 30000), ]
+
 # select x vars
 x1_vars <- c("d14_spend","d7_spend","d3_spend","d1_spend",
-              "count_p_1","max_p_2","p_4","p_5","sum_p_6","count_p_7",
-              "count_p_8","count_p_9","count_p_10","count_p_11","count_p_12",
-              "count_p_13","len_p_14","count_p_15","count_p_19","count_p_20")
-x2_vars <- c("count_p_1","max_p_2","p_4","p_5","sum_p_6","count_p_7",
-             "count_p_8","count_p_9","count_p_10","count_p_11","count_p_12",
-             "count_p_13","len_p_14","count_p_15","count_p_19","count_p_20")
-
-# replace missings with 0
-data[is.na(data) == TRUE] <- 0
+             "count_p_1","max_p_2","p_4","p_5","sum_p_6","count_p_7")
+             #"count_p_8","count_p_9","count_p_10","count_p_11","count_p_12",
+             #"count_p_13","len_p_14","count_p_15","count_p_19","count_p_20")
+x2_vars <- c("count_p_1","max_p_2","p_4","p_5","sum_p_6","count_p_7")
+             #"count_p_8","count_p_9","count_p_10","count_p_11","count_p_12",
+             #"count_p_13","len_p_14","count_p_15","count_p_19","count_p_20")
 
 # set seed and specify cross-validation
 set.seed(825)
 cv_fold <- trainControl(method = "cv",
-                        number = 5)
+                        number = 5,
+                        search = "grid")
 
 # set number of variables to randomly sample at each split
-mtry <- sqrt(ncol(data))
+mtry <- round(sqrt(ncol(data_sub)),0)
 
 # train random forests
-rf_x1 <- train(as.formula(paste("d30_spend", paste(x1_vars, collapse = " + "), sep = " ~ ")), 
-                                  data = data,
-                                  method = "ranger",
-                                  #method = "rpart",
-                                  trControl = cv_fold,
-                                  metric = "RMSE",
-                                  importance = "impurity",
-                                  tuneLength=50)
-rf_x2 <- train(as.formula(paste("d30_spend", paste(x2_vars, collapse = " + "), sep = " ~ ")), 
-                                 data = data, 
-                                 method = "ranger",
-                                 #method = "rpart",
-                                 trControl = cv_fold,
-                                 metric = "RMSE",
-                                 importance = "impurity",
-                                 tuneLength=50)
+rf_x1 <- train(as.formula(paste("y", paste(x1_vars, collapse = " + "), sep = " ~ ")), 
+               data = data_sub,
+               method = "ranger",
+               #method = "rpart",
+               trControl = cv_fold,
+               metric = "RMSE",
+               importance = "impurity",
+               tuneLength=30)
+rf_x2 <- train(as.formula(paste("y", paste(x2_vars, collapse = " + "), sep = " ~ ")), 
+               data = data_sub, 
+               method = "ranger",
+               #method = "rpart",
+               trControl = cv_fold,
+               metric = "RMSE",
+               importance = "impurity",
+               tuneLength=30)
 
 print(rf_x1)
 print(rf_x2)
@@ -127,24 +136,21 @@ plot(rf_x2)
 rf_x1$results
 rf_x2$results
 
-# for decision tree
+### look at variable importance
 print(varImp((rf_x1)))
 plot(varImp((rf_x1)))
+print(varImp((rf_x2)))
+plot(varImp((rf_x2)))
 
-### look at variable importance
 rf_x1_var_imp <- vip(rf_x1$finalModel,
                      #bar = FALSE,
                      size = 1.5,
-                     num_features = 15) +
-                theme(axis.text.x=element_blank(),
-                      axis.ticks.x=element_blank())
+                     num_features = 15)
 
 rf_x2_var_imp <- vip(rf_x2$finalModel,
                      #bar = FALSE,
                      size = 1.5,
-                     num_features = 15) +
-                theme(axis.text.x=element_blank(),
-                      axis.ticks.x=element_blank())
+                     num_features = 15)
 
 vip_compare <- grid.arrange(rf_x1_var_imp,
                             rf_x2_var_imp,
@@ -153,8 +159,8 @@ vip_compare <- grid.arrange(rf_x1_var_imp,
 
 ### generate partial dependency plots with main x variable
 rf_x1_par <- partial(rf_x1,
-                    pred.var = c("d14_spend"),
-                    chull = TRUE)
+                     pred.var = c("d14_spend"),
+                     chull = TRUE)
 rf_x1_plot <- ggplot(rf_x1_par, aes(x=d14_spend, y=yhat)) + 
   geom_line() +
   geom_smooth(method="auto") +
@@ -168,9 +174,9 @@ rf_x1_plot <- ggplot(rf_x1_par, aes(x=d14_spend, y=yhat)) +
         axis.ticks.y=element_blank())
 
 rf_x2_par <- partial(rf_x2,
-                     pred.var = c("count_p_15"),
+                     pred.var = c("count_p_1"),
                      chull = TRUE)
-rf_x2_plot <- ggplot(rf_x2_par, aes(x=count_p_15, y=yhat)) + 
+rf_x2_plot <- ggplot(rf_x2_par, aes(x=count_p_1, y=yhat)) + 
   geom_line() +
   geom_smooth(method="auto") +
   #xlim(0,.5) +
@@ -200,16 +206,16 @@ rf_x1_plot2 <- ggplot(rf_x1_par2, aes(x=d14_spend, y=d7_spend, z=yhat)) +
         axis.ticks.y=element_blank())
 
 rf_x2_par2 <- partial(rf_x2,
-                      pred.var = c("count_p_15","count_p_9"),
+                      pred.var = c("count_p_1","sum_p_6"),
                       chull = TRUE)
-rf_x2_plot2 <- ggplot(rf_x2_par2, aes(x=count_p_15, y=count_p_9, z=yhat)) +
+rf_x2_plot2 <- ggplot(rf_x2_par2, aes(x=count_p_1, y=sum_p_6, z=yhat)) +
   geom_tile(aes(fill=yhat)) +
   scale_fill_gradientn(colours=rev(brewer.pal(9,"YlGnBu")), name = "D30 Spend", labels = NULL) +
   stat_contour(bins=10,aes(x=Number_experiments, y=Experimentation_adoption, z=yhat), color="black", size=0.2) +
   #xlim(0,.5) +
   #ylim(0,10) +
-  xlab("Count P15") +
-  ylab("Count P9") +
+  xlab("Count P1") +
+  ylab("Sum P6") +
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.text.y=element_blank(),
