@@ -12,7 +12,7 @@ pkgs <- list("glmnet", "reticulate", "stringr", "rstudioapi", "data.table", "par
 lapply(pkgs, require, character.only = T)
 
 # set wd
-setwd("/Users/jr/Dropbox/Talks:teaching/Mannheim Business School/Data")
+setwd("TBD")
 
 ### read in data
 #write.csv(data, file="combined.csv")
