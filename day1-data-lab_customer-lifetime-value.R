@@ -109,7 +109,8 @@ cv_fold <- trainControl(method = "cv",
                         search = "grid")
 
 # set number of variables to randomly sample at each split
-mtry <- round(sqrt(ncol(data_sub)),0)
+### FIX
+mtry <- round(sqrt(ncol(9)),0)
 
 # train random forests
 rf_x1 <- train(as.formula(paste("y", paste(x1_vars, collapse = " + "), sep = " ~ ")), 
